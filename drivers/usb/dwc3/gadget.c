@@ -1275,7 +1275,7 @@ static int __dwc3_gadget_get_frame(struct dwc3 *dwc)
 static void __dwc3_gadget_start_isoc(struct dwc3 *dwc,
 		struct dwc3_ep *dep, u32 cur_uf)
 {
-	int ret, i;
+	int ret, i, retry_count;
 
 	if (list_empty(&dep->pending_list)) {
 		dev_info(dwc->dev, "%s: ran out of requests\n",
@@ -1283,8 +1283,13 @@ static void __dwc3_gadget_start_isoc(struct dwc3 *dwc,
 		dep->flags |= DWC3_EP_PENDING_REQUEST;
 		return;
 	}
+	if (dep->interval) {
+		retry_count = (DWC3_ISOC_MAX_RETRIES_MSECS * 8) / dep->interval;
+	} else {
+		retry_count = (DWC3_ISOC_MAX_RETRIES_MSECS * 8);
+	}
 
-	for (i = 0; i < DWC3_ISOC_MAX_RETRIES; i++) {
+	for (i = 0; i < retry_count; i++) {
 		/* always start isochronous aligned to dep->interval */
 		cur_uf = DWC3_ALIGN_FRAME(dep, cur_uf, i + 1);
 		ret = __dwc3_gadget_kick_transfer(dep, cur_uf);
