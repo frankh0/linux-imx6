@@ -1218,6 +1218,7 @@ static int __dwc3_gadget_kick_transfer(struct dwc3_ep *dep, u16 cmd_param)
 	int				starting;
 	int				ret;
 	u32				cmd;
+	struct dwc3			*dwc = dep->dwc;
 
 	starting = !(dep->flags & DWC3_EP_BUSY);
 
@@ -1251,6 +1252,11 @@ static int __dwc3_gadget_kick_transfer(struct dwc3_ep *dep, u16 cmd_param)
 			memset(req->trb, 0, sizeof(struct dwc3_trb));
 		dep->queued_requests--;
 		dwc3_gadget_del_and_unmap_request(dep, req, ret);
+
+		spin_unlock(&dwc->lock);
+		usb_gadget_giveback_request(&dep->endpoint, &req->request);
+		spin_lock(&dwc->lock);
+
 		return ret;
 	}
 
